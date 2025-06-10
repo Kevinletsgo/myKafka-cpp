@@ -23,18 +23,43 @@ void parse_correlation_id(const char* buffer, kafka_message& response, int clien
 
 
 void parse_api_version(const char* buffer, kafka_message& response, int client_fd) {
-    memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
+    // memcpy(&response.correlation_id, buffer + 8, sizeof(response.correlation_id));
+    // memcpy(&response.api_version, buffer + 6, sizeof(response.api_version));
+    // response.message_size = htonl(0); // Convert to network byte order    
+    // if(response.api_version < 5 || response.api_version > 11) {
+    //     std::cerr << "Invalid API version: " << response.api_version << std::endl;
+    //     response.api_version = 35; // Set to 35 for invalid versions
+    // }
+    // response.api_version = htonl(response.api_version);
+    
+    // write(client_fd, &response.message_size, sizeof(response.message_size));
+    // write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
+    // write(client_fd, &response.api_version, sizeof(response.api_version));
+        // Assuming buffer layout matches Kafka protocol:
+    // - API version is at offset 6 (2 bytes)
+    // - Correlation ID is at offset 8 (4 bytes)
     memcpy(&response.api_version, buffer + 6, sizeof(response.api_version));
-    response.message_size = htonl(0); // Convert to network byte order    
+    memcpy(&response.correlation_id, buffer + 8, sizeof(response.correlation_id));
+    
+    // Convert from network byte order if needed
+    response.api_version = ntohs(response.api_version);  // Assuming 2-byte API version
+    response.correlation_id = ntohl(response.correlation_id);
+    
+    // Validate API version
     if(response.api_version < 5 || response.api_version > 11) {
         std::cerr << "Invalid API version: " << response.api_version << std::endl;
         response.api_version = 35; // Set to 35 for invalid versions
     }
-    response.api_version = htonl(response.api_version);
     
+    // Prepare response (convert to network byte order)
+    response.message_size = htonl(0);
+    uint16_t api_version_net = htons(response.api_version);
+    uint32_t correlation_id_net = htonl(response.correlation_id);
+    
+    // Send response
     write(client_fd, &response.message_size, sizeof(response.message_size));
-    write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
-    write(client_fd, &response.api_version, sizeof(response.api_version));
+    write(client_fd, &correlation_id_net, sizeof(correlation_id_net));
+    write(client_fd, &api_version_net, sizeof(api_version_net));
 }
 int main(int argc, char* argv[]) {
     // Disable output buffering
