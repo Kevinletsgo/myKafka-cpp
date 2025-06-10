@@ -26,7 +26,7 @@ void parse_api_version(const char* buffer, kafka_message& response, int client_f
     memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
     memcpy(&response.api_version, buffer + 6, sizeof(response.api_version));
     response.message_size = htonl(0); // Convert to network byte order    
-    if(response.api_version < 5 && response.api_version > 11) {
+    if(response.api_version < 5 || response.api_version > 11) {
         std::cerr << "Invalid API version: " << response.api_version << std::endl;
         response.api_version = 35; // Set to 35 for invalid versions
     }
