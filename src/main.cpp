@@ -11,8 +11,31 @@
 struct kafka_message {
     int32_t message_size; // Size of the message
     int32_t correlation_id; // Correlation ID
+    int16_t api_version; // API version
 };
+void parse_correlation_id(const char* buffer, kafka_message& response, int client_fd) {
+    // Assuming the correlation ID is at offset 8 in the buffer
+    memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
+    response.message_size = htonl(0);
+    write(client_fd, &response.message_size, sizeof(response.message_size));
+    write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
+}
 
+
+void parse_api_version(const char* buffer, kafka_message& response, int client_fd) {
+    memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
+    memcpy(&response.api_version, buffer + 6, sizeof(response.api_version));
+    response.message_size = htonl(0); // Convert to network byte order    
+    if(response.api_version < 5 && response.api_version > 11) {
+        std::cerr << "Invalid API version: " << response.api_version << std::endl;
+        response.api_version = 35; // Set to 35 for invalid versions
+    }
+    response.api_version = htonl(response.api_version);
+    
+    write(client_fd, &response.message_size, sizeof(response.message_size));
+    write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
+    write(client_fd, &response.api_version, sizeof(response.api_version));
+}
 int main(int argc, char* argv[]) {
     // Disable output buffering
     std::cout << std::unitbuf;
@@ -73,10 +96,9 @@ int main(int argc, char* argv[]) {
         close(server_fd);
         return 1;
     }
-    memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
-    response.message_size = htonl(0);
-    write(client_fd, &response.message_size, sizeof(response.message_size));
-    write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
+    // parse_correlation_id(buffer, response, client_fd);
+    parse_api_version(buffer, response, client_fd);
+    std::cout << "Parsed API version: " << response.api_version << std::endl;
     close(client_fd);
 
     close(server_fd);
