@@ -80,6 +80,11 @@ public:
         body_size = 0;
 
         // 写入 error_code（2字节）
+        int16_t request_apiVersion;
+        memcpy(&request_apiVersion, buffer + 6, sizeof(request_apiVersion));
+        if(request_apiVersion < 5 || request_apiVersion > 11) {
+            error_code = 35; // 设置为 35
+        }
         memcpy(respondBuffer + header_size + body_size, &error_code, sizeof(error_code));
         body_size += sizeof(error_code);
 
