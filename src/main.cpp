@@ -82,8 +82,9 @@ public:
         // 写入 error_code（2字节）
         int16_t request_apiVersion;
         memcpy(&request_apiVersion, buffer + 6, sizeof(request_apiVersion));
-        if(request_apiVersion < 0 || request_apiVersion > 4) {
-            error_code = 35; // 设置为 35
+
+        if(ntohs(request_apiVersion) < 0 || ntohs(request_apiVersion) > 4) {
+            error_code = htons(35); // 设置为 35
         }
         memcpy(respondBuffer + header_size + body_size, &error_code, sizeof(error_code));
         body_size += sizeof(error_code);
