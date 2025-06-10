@@ -78,13 +78,13 @@ public:
         memcpy(&request_api_key, buffer + 4, sizeof(request_api_key));
 
         body_size = 0;
-        
+
         // 写入 error_code（2字节）
         memcpy(respondBuffer + header_size + body_size, &error_code, sizeof(error_code));
         body_size += sizeof(error_code);
 
         // 写入 array_len（1字节）
-        array_len = static_cast<int8_t>(api_format.size());
+        array_len = static_cast<int8_t>(api_format.size()) + 1;
         memcpy(respondBuffer + header_size + body_size, &array_len, sizeof(array_len));
         body_size += sizeof(array_len);
 
