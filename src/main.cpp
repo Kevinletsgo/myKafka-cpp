@@ -8,11 +8,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+struct kafka_message {
+    int32_t message_size; // Size of the message
+    int32_t correlation_id; // Correlation ID
+};
+
 int main(int argc, char* argv[]) {
     // Disable output buffering
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
-
+    
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         std::cerr << "Failed to create server socket: " << std::endl;
@@ -58,10 +63,20 @@ int main(int argc, char* argv[]) {
     // 
     int client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_len);
     std::cout << "Client connected\n";
-    int msize = htonl(5);
-    int cid= htonl(7);
-    write(client_fd,&msize,4);
-    write(client_fd,&cid,4);
+    kafka_message response{};
+    // read from client
+    char buffer[1024];
+    ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+    if (bytes_received < 0) {
+        std::cerr << "Failed to receive data from client" << std::endl;
+        close(client_fd);
+        close(server_fd);
+        return 1;
+    }
+    memcpy(&response.correlation_id, buffer+8, sizeof(response.correlation_id));
+    response.message_size = htonl(0);
+    write(client_fd, &response.message_size, sizeof(response.message_size));
+    write(client_fd, &response.correlation_id, sizeof(response.correlation_id));
     close(client_fd);
 
     close(server_fd);
